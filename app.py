@@ -1,38 +1,32 @@
-from flask import Flask, render_template, request, redirect, url_for, session
-import re
+import scrypt
 
-app = Flask(__name__)
-app.secret_key = 'your_secret_key'
-
-# Dummy storage for users (use a database in production)
-users = {}
-
-@app.route('/')
-def home():
-    if 'username' in session:
-        return render_template('home.html', username=session['username'])
-    return redirect(url_for('login'))
+# Replace bcrypt usage with scrypt in your script
 
 @app.route('/login/', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form['username']
-        password = request.form['password']
+        password = request.form['password'].encode('utf-8')
 
-        # User validation
-        if username in users and users[username] == password:
-            session['username'] = username
-            return redirect(url_for('home'))
-        else:
-            error = 'Invalid credentials. Please try again.'
-            return render_template('login.html', error=error)
+        cursor = db.cursor()
+        cursor.execute("SELECT * FROM users WHERE username=%s", (username,))
+        user = cursor.fetchone()
+        cursor.close()
+
+        if user:
+            stored_password, salt = user[2].split('$')
+            try:
+                hashed_password = scrypt.hash(password, salt.encode('utf-8'))
+                if hashed_password == stored_password.encode('utf-8'):
+                    session['username'] = username
+                    return redirect(url_for('home'))
+            except scrypt.error:
+                pass
+        
+        error = 'Invalid credentials. Please try again.'
+        return render_template('login.html', error=error)
 
     return render_template('login.html', error=None)
-
-@app.route('/logout/')
-def logout():
-    session.pop('username', None)
-    return redirect(url_for('login'))
 
 @app.route('/newuser/', methods=['GET', 'POST'])
 def new_user():
@@ -59,9 +53,16 @@ def new_user():
         else:
             message_mail = "L'adresse email n'est pas valide."
 
-        # Check if username is valid and unique, and password and email are valid
-        if "ne respecte pas" not in message_username and "ne respecte pas" not in message_password and "n'est pas valide" not in message_mail:
-            users[username] = password
+        if re.match(r"^[a-z]{6,10}$", username) and re.match(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[%#{}@]).{6,}$", password) and re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', mail):
+            salt = bcrypt.gensalt().decode('utf-8')
+            hashed_password = scrypt.hash(password.encode('utf-8'), salt.encode('utf-8')).decode('utf-8')
+            hashed_password = f"{hashed_password}${salt}"
+
+            cursor = db.cursor()
+            cursor.execute("INSERT INTO users (username, password, email) VALUES (%s, %s, %s)", (username, hashed_password, mail))
+            db.commit()
+            cursor.close()
+
             return redirect(url_for('login'))
 
         return render_template('newuser.html', message_username=message_username, message_password=message_password, message_mail=message_mail)
