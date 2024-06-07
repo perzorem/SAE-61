@@ -1,29 +1,13 @@
-FROM python:3.6
-
-EXPOSE 5000
+FROM python:3.8-slim
 
 WORKDIR /app
 
-COPY requirements.txt /app
-RUN pip install -r requirements.txt
+COPY requirements.txt .
+COPY app.py .
+COPY templates/ templates/
 
-COPY app.py /app
-CMD python app.py
-FROM mysql
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Environment variables
-ENV MYSQL_ROOT_PASSWORD secretadmin
+EXPOSE 5000
 
-# Allows you to change the value of "max_allowed_packet"
-ADD ["mysqlconf/gatewaymy.cnf", "/etc/mysql/conf.d/conf_mysql.cnf"]
-
-# Create Database
-RUN	mkdir /usr/sql
-RUN	chmod 644 /usr/sql
-
-ADD ["sql/sources.sql", "/usr/sql/sources.sql"]
-
-RUN /etc/init.d/mysql start && \
-        mysql -u root -p${MYSQL_ROOT_PASSWORD} -e "CREATE DATABASE lba" && \
-    	mysql -u root -p${MYSQL_ROOT_PASSWORD} -D lba < /usr/sql/sources.sql && \
-    	rm -rd /usr/sql && \
+CMD ["python", "app.py"]

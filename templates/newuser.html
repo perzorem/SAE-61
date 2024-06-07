@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New User Registration</title>
+</head>
+<body>
+    <h2>Register New User</h2>
+    <form method="post">
+        <div>
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username" required>
+            <p>{{ message_username }}</p>
+        </div>
+        <div>
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required>
+            <p>{{ message_password }}</p>
+        </div>
+        <div>
+            <label for="mail">Email:</label>
+            <input type="email" id="mail" name="mail" required>
+            <p>{{ message_mail }}</p>
+        </div>
+        <div>
+            <button type="submit">Register</button>
+        </div>
+    </form>
+</body>
+</html>
+
